@@ -1,6 +1,7 @@
 from Queue import Queue
 from errors import EmptyQueueException
 
+
 class PacketQueue:
 	# @param: Initial size of queue (defaults to 0). 
 	def __init__( self, size = 0 ):
@@ -17,7 +18,7 @@ class PacketQueue:
 		self.packet_queue.put( queued_packet )
 
 	# Returns: A packet. 
-	# Throws: User-defined EmptyQueueException 
+	# Throws: User-defined EmptyQueueException
 	# if the packet queue does not contain any packets. 
 	# Behaviour: Dequeues packets in F.I.F.O. order. 
 	def dequeue( self ):
