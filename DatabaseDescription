@@ -25,6 +25,9 @@ This function will return the next 1,000,0000 names regardless
 | readIntoDB(filename)|
 -----------------------
 
+Question: Say if some of the names in the block have been processed (e.g., 3000 out of the 5000), 
+does this function just return all of the names in the specificed block that have not been marked
+as "processed"?
 
 @return:returns a block of data (Approx 5000 names)
 the data will be an array of objects
