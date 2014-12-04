@@ -1,6 +1,4 @@
 from worker import Worker
-
-
 """
 Heap's internal representation is an array. 
 Each item of the array contains a dict; i.e., key-value pairs, 
@@ -22,19 +20,22 @@ Acknowledgement cases:
 		-> Invoke the reorder() function upon the WorkerHeap, in order to reflect 
 		   the changed Worker key. 
 	2. IF ( PROCESSED A FIXED AMOUNT, AND AMOUNT == TOTAL NUMBER OF ITEMS ASSIGNED )
+	  	-> 
 
 """
 
 class WorkerHeap:
-	def __init__( self, initial_capacity = 100 ):
+	def __init__( self, initial_capacity = 100, fixed_size = False ):
 		self.heap = [ None ] * initial_capacity
 		self.initialise_keys()
 		self.N = 0
+		self.fixed_size = fixed_size
+		self.capacity = initial_capacity
 
 	def initialise_keys( self ):
 		for i in range( 0, len( self.heap ) ):
-			self.heap[i] = dict([(i+1000, None)])
-		
+			self.heap[i] = dict([(i+10000, None)])
+
 	def empty( self ):
 		return ( self.N == 0 )
 
@@ -60,18 +61,41 @@ class WorkerHeap:
 				self.exch( i, i * 2 + 1 )
 			i += 1
 
+	# @param: A Worker instance. 
+	# Returns: The Boolean, True, if the Worker 
+	# instance passed as an argument was successfully
+	# added to the heap. Otherwise, it returns False. 
+	# It would return False if the heap were a fixed size 
+	# and full. 
 	def insert( self, worker ):
-		if ( self.N == len( self.heap ) - 1 ):
-			self.resize( 2 * len( self.heap ) )
+		assert( isinstance( worker, Worker ) )
+		if ( self.fixed_size == False ):
+			if ( self.N == len( self.heap ) - 1 ):
+				self.resize( 2 * len( self.heap ) )
 
-		self.N += 1;
-		if ( self.N > 1 ):
-			self.heap[ self.N ] = dict( [( self.generate_key( worker ), worker )] )
-			self.swim( self.N );
-			assert self.is_min_heap();
-		else:
-			worker.set_index_in_heap( 1 )
-			self.heap[ self.N ] = dict([( self.generate_key( worker ), worker )] )
+			self.N += 1
+			if ( self.N > 1 ):
+				self.heap[ self.N ] = dict( [( self.generate_key( worker ), worker )] )
+				self.swim( self.N );
+				assert self.is_min_heap();
+			else:
+				worker.set_index_in_heap( 1 )
+				self.heap[ self.N ] = dict([( self.generate_key( worker ), worker )] )
+			return True
+		elif ( ( self.fixed_size == True ) & 
+			( self.N < self.capacity ) ):
+			# add to heap, but do not re-size
+			self.N += 1
+			if ( self.N > 1 ):
+				self.heap[ self.N ] = dict( [( self.generate_key( worker ), worker )] )
+				self.swim( self.N );
+				assert self.is_min_heap();
+			else:
+				worker.set_index_in_heap( 1 )
+				self.heap[ self.N ] = dict([( self.generate_key( worker ), worker )] )
+			return True
+		return False
+
 
 
 	# Should only be able to 'delete'/dequeue a Worker from 
@@ -82,19 +106,41 @@ class WorkerHeap:
 	#    and it is not available to process more. 
 	# c) The worker has timed-out. 
 	# The function below needs to be modified to reflect the comment above. 
+	# It's important to note that what is being deleted is not, 
+	# directly, a Worker instance, but rather a key-value pair, where
+	# the key is an int representing a Worker instance's priority
+	# and the value is the corresponding Worker instance. 
 	def delete_min( self ):
-		if ( empty() ):
+		if ( self.empty() ):
 			raise Exception( "No elements remaining." )
 
-		exch( 1, self.N )
+		self.exch( 1, self.N )
 		min = self.heap[ self.N ]
 		self.N -= 1
 		self.sink( 1 )
 		self.heap[self.N+1] = None
-		if ( ( self.N > 0 ) & ( self.N == ( len( self.heap ) -1 )/4 ) ):
-			self.resize( len( self.heap )/2 )
+		if ( self.fixed_size == False ):
+			if ( ( self.N > 0 ) & ( self.N == ( len( self.heap ) -1 )/4 ) ):
+				self.resize( len( self.heap )/2 )
 		assert self.is_min_heap()
 		return min
+
+	# Returns: Worker instance reference. 
+	def dequeue( self ):
+		should_return = False
+		i = 0
+		while ( ( i <= self.size() ) & ( self.empty() == False ) ):
+			temp = self.delete_min()
+			key = temp.keys()[0]
+			if ( temp[key].is_busy() ):
+				self.insert( temp )
+			elif ( temp[key].is_connected() == True ):
+				return temp[key] 
+			elif ( i > self.size() ):
+				i += 1
+		return None
+
+
 
 	def swim( self, k ):
 		while ( k > 1 & self.greater( k/2, k ) ):
@@ -104,7 +150,7 @@ class WorkerHeap:
 	def sink( self, k ):
 		while ( 2 * k <= self.N ):
 			j = 2 * k
-			if ( j < self.N & self.greater( j, j+1 ) ):
+			if ( (j < self.N) & (self.greater( j, j+1 )) ):
 				j += 1
 			if ( ( self.greater( k, j ) == False ) ):
 				break
@@ -127,23 +173,29 @@ class WorkerHeap:
 		return self.is_min_heap_recursive( 1 )
 
 	def is_min_heap_recursive( self, k ):
-		if ( k > self.N ):
+		if ( ( k > self.N ) | ( 2 * k >= self.N) ):
 			return True
 		left = 2 * k
 		right = 2 * k + 1
-		if ( left <= self.N & self.greater( k, left ) ):
-			return false
-		if ( right <= self.N & self.greater( k, right ) ):
-			return false
+		if ( (left <= self.N) & (self.greater( k, left )) ):
+			return False
+		if ( (right <= self.N) & (self.greater( k, right )) ):
+			return False
 		return self.is_min_heap_recursive( left ) & self.is_min_heap_recursive( right )
 
+
+	def get_capacity( self ):
+		return self.capacity
 
 	def generate_key( self, worker ):
 		if ( worker.items_processed == 0 ):
 			return worker.get_items_assigned()
 		return worker.get_items_assigned() / worker.items_processed()
 
+
+
 if __name__ == "__main__":
+	# Just testing functionality. 
 	heap_test = WorkerHeap()
 	worker_1 = Worker( 1, 1, 40 )
 	worker_2 = Worker( 2, 2, 50 )
@@ -153,17 +205,17 @@ if __name__ == "__main__":
 	heap_test.insert( worker_2 )
 	heap_test.insert( worker_3 )
 	heap_test.insert( worker_4 )
-	heap_test.heap[1] = dict([( 60, Worker( 5, 4, 60 ))])
 	print( "Before: " )
 	print( heap_test.heap[0] )
 	print( heap_test.heap[1] )
 	print( heap_test.heap[2] )
 	print( heap_test.heap[3] )
 	print( heap_test.heap[4] )
-	print( "\nAfter: " )
-	heap_test.reorder()
-	print( heap_test.heap[0] )
-	print( heap_test.heap[1][40].get_index_in_heap() )
-	print( heap_test.heap[2][40].get_index_in_heap() )
-	print( heap_test.heap[3][50].get_index_in_heap() )
-	print( heap_test.heap[4][60].get_index_in_heap() )
+	#print( "\nAfter: " )
+	#heap_test.reorder()
+	#print( heap_test.heap[0] )
+	#print( heap_test.heap[1][40].get_index_in_heap() )
+	#print( heap_test.heap[2][40].get_index_in_heap() )
+	#print( heap_test.heap[3][50].get_index_in_heap() )
+	#print( heap_test.heap[4][60].get_index_in_heap() )
+
