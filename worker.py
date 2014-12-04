@@ -1,3 +1,6 @@
+# Still uncertain about how this will work, so 
+# the ADT is subject to change. 
+
 class Worker:
 	def __init__( self, id, block_id, items_assigned ):
 		self.id = id
@@ -9,6 +12,7 @@ class Worker:
 		self.busy = None
 		self.items_processed = 0
 		self.index_in_heap = -1
+		self.packet = None
 
 	def set_block_id( self, id ):
 		self.block_id = id
@@ -22,13 +26,13 @@ class Worker:
 	def get_items_assigned( self ):
 		return self.items_assigned
 
-	def connected( self ):
+	def is_connected( self ):
 		return self.connected
 
-	def available( self ):
+	def is_available( self ):
 		return self.available
 
-	def busy( self ):
+	def is_busy( self ):
 		return self.busy
 
 	def items_processed( self ):
@@ -43,6 +47,20 @@ class Worker:
 
 	def get_index_in_heap( self ):
 		return self.index_in_heap
+
+	def has_timed_out( self ):
+		return self.packet.has_timed_out()
+
+	def set_packet( self, packet ):
+		self.packet = packet
+
+	def set_connected( self, connected ):
+		self.connected = connected
+
+	def set_busy( self, busy ):
+		self.busy = busy
+
+
 
 
 
