@@ -14,29 +14,26 @@ Database Methods:
 |updateState(block_id,pos)|
 ---------------------------
 
-Reads 1,000,000 names into the database at a time
+Reads names into the database at a time
 @param:filename
-@param:size
 @return:Void
-----------------------------
-| readIntoDB(filename,size)|
-----------------------------
+This function will return the next 1,000,0000 names regardless
+*depending there is that amount.
+
+—Give coordinator block_ids to push into the priority queue
+-----------------------
+| readIntoDB(filename)|
+-----------------------
 
 
 @return:returns a block of data (Approx 5000 names)
 the data will be an array of objects
-------------
-| getData()|
-------------
+with preceding block_id
+———————————————————-
+| getData(block_id)|
+———————————————————-
 
 
-@param:block_id
-@param:start index of what needs to be processed
-@return: remainder of block
-the data will be an array of objects
--------------------------------
-| packetize(block_id,startPos)|
--------------------------------
 
 **Please Have a look over this and make changes to want
 you want or need. If I have forgotten anything please add it**
