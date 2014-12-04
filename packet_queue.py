@@ -16,7 +16,7 @@ class PacketQueue:
 	def enqueue( self, queued_packet ):
 		self.packet_queue.put( queued_packet )
 
-	# Returns: a packet. 
+	# Returns: A packet. 
 	# Throws: User-defined EmptyQueueException 
 	# if the packet queue does not contain any packets. 
 	# Behaviour: Dequeues packets in F.I.F.O. order. 
