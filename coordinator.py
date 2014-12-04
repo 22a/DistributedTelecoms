@@ -1,4 +1,5 @@
-
+from packet_pool import PacketQueue
+from worker_pool import WorkerHeap
 
 # The Coordinator must satisfy the following:
 # 	1. It must contain a packet pool/queue, representing
@@ -25,6 +26,8 @@ synchronously and asynchronously. Type of messages from the client include:
 
 class Coordinator:
 	def __init__( self ):
+		self.packet_pool = PacketQueue()
+		self.worker_pool = WorkerPool()
 
 # Special function that re-packetises -- I've got a time-out from a worker - don't give __init__
 # any more data. 
