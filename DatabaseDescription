@@ -1,0 +1,42 @@
+Database Methods:
+
+@param:block_id
+@return:index of what needs to be processed 
+(int 5000 means that 5000 lines where processed)
+----------------------
+| getState(block_id) |
+----------------------
+
+@param:block_id
+@param:ammount processed (1K will set the 1K BOOL...)
+@return:Void
+---------------------------
+|updateState(block_id,pos)|
+---------------------------
+
+Reads 1,000,000 names into the database at a time
+@param:filename
+@param:size
+@return:Void
+----------------------------
+| readIntoDB(filename,size)|
+----------------------------
+
+
+@return:returns a block of data (Approx 5000 names)
+the data will be an array of objects
+------------
+| getData()|
+------------
+
+
+@param:block_id
+@param:start index of what needs to be processed
+@return: remainder of block
+the data will be an array of objects
+-------------------------------
+| packetize(block_id,startPos)|
+-------------------------------
+
+**Please Have a look over this and make changes to want
+you want or need. If I have forgotten anything please add it**
