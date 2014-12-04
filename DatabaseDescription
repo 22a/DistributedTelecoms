@@ -36,6 +36,13 @@ with preceding block_id
 | getData(block_id)|
 ———————————————————-
 
+@return:returns a Boolean, true, if there is data block in the database
+waiting to be processed. Otherwise, it returns false. 
+———————————————————-
+| dataAvailable()|
+———————————————————-
+
+
 
 
 **Please Have a look over this and make changes to want
