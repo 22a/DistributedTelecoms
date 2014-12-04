@@ -7,7 +7,7 @@ class PacketQueue:
 	def __init__( self, size = 0 ):
 		self.packet_queue = Queue()
 
-	# Returns True if the queue does not contain
+	# Returns: True if the queue does not contain
 	# any queued packets. 
 	def empty( self ):
 		return self.packet_queue.empty()
