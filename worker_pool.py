@@ -1,4 +1,9 @@
+# -*- coding: utf-8 -*-
+
 from worker import Worker
+from errors import WorkerUnavailableException
+
+
 """
 Heap's internal representation is an array. 
 Each item of the array contains a dict; i.e., key-value pairs, 
@@ -110,9 +115,12 @@ class WorkerHeap:
 	# directly, a Worker instance, but rather a key-value pair, where
 	# the key is an int representing a Worker instance's priority
 	# and the value is the corresponding Worker instance. 
+
+	# Throws: User-defined WorkerUnavailableException if heap 
+	# does not contain any Workers. 
 	def delete_min( self ):
 		if ( self.empty() ):
-			raise Exception( "No elements remaining." )
+			raise WorkerUnavailableException( "No elements remaining." )
 
 		self.exch( 1, self.N )
 		min = self.heap[ self.N ]
@@ -125,19 +133,25 @@ class WorkerHeap:
 		assert self.is_min_heap()
 		return min
 
-	# Returns: Worker instance reference. 
+	# Returns: Worker instance reference, which may or 
+	# may not be available to process data; i.e., it 
+	# may already be processing data.
 	def dequeue( self ):
 		should_return = False
 		i = 0
 		while ( ( i <= self.size() ) & ( self.empty() == False ) ):
-			temp = self.delete_min()
-			key = temp.keys()[0]
-			if ( temp[key].is_busy() ):
-				self.insert( temp )
-			elif ( temp[key].is_connected() == True ):
-				return temp[key] 
-			elif ( i > self.size() ):
-				i += 1
+			try:
+				temp = self.delete_min()
+			except WorkerUnavailableException, e:
+				print( str( e ) )
+			else:
+				key = temp.keys()[0]
+				if ( temp[key].is_busy() ):
+					self.insert( temp )
+				elif ( temp[key].is_connected() == True ):
+					return temp[key] 
+				elif ( i > self.size() ):
+					i += 1
 		return None
 
 
