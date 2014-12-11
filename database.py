@@ -5,6 +5,7 @@ import json
 class Database:
 
 	READ_IN_SIZE = 1000000
+	block = 0
 
 		#Open a database for work
 	def _init_(self):
@@ -16,7 +17,7 @@ class Database:
 
 	def get_state(self,block_id):
 		self.temp = []
-		result = self.conn.execute("""SELECT DISTINCT oneK,twoK,threeK,fourK,fiveK FROM blockmanagement WHERE blockid=1 =?""",(block_id,))
+		result = self.conn.execute("""SELECT DISTINCT oneK,twoK,threeK,fourK,fiveK FROM blockmanagement WHERE blockid=?""",(block_id,))
 		for row in result:
 			self.temp=row
 		
@@ -40,7 +41,7 @@ class Database:
 			return count*1000
 
 
-	
+
 	def update_state(self,block_id,pos):
 		if pos==1000:
 			self.conn.execute("""UPDATE blockmanagement SET oneK = ? WHERE blockid= ? """,(True,block_id))
@@ -51,7 +52,7 @@ class Database:
 		elif pos==4000:
 			self.conn.execute("""UPDATE blockmanagement SET fourK = ? WHERE blockid= ? """,(True,block_id))
 		elif pos==5000:
-			self.conn.execute("""UPDATE blockmanagement SET fiveK = ? WHERE blockid= ? """,(True,block_id))
+			self.conn.execute("""UPDATE blockmanagement SET fiveK = ?,processed = ? WHERE blockid= ? """,(True,True,block_id))
 		self.conn.commit()
 
 	
@@ -71,25 +72,32 @@ class Database:
 		return json.dumps(self.dataObject, sort_keys=True, indent=4,
                           separators=(',', ': '))
 
-
 		self.conn.commit()
 
+	
 	def data_available(self):
-		print "is data data available"
+		cursor=self.conn.execute("""SELECT processed FROM blockmanagement WHERE processed=?""",(False,))
+		for i,row in enumerate(cursor):
+			i=i+1
+
+		if i>0:
+			return True;
+		else:
+			return False;
+	
 	
 	
 
 	def read_into_db(self,filename):
-		block=0
 		j=0
 		with open(filename, 'r') as myfile:
 			lines_gen = islice(myfile,self.startPos,self.endPos)
     			for line in lines_gen:
-    				self.conn.execute('''INSERT INTO datapool(num, blockid, data) VALUES(?,?,?)''', (j, block, line))
+    				self.conn.execute('''INSERT INTO datapool(num, blockid, data) VALUES(?,?,?)''', (j, Database.block, line))
     				j=j+1
     				if j==5000:
-    					block=block+1 
-    					self.conn.execute('''INSERT INTO blockmanagement(blockid) VALUES(?)''', (block,))
+    					Database.block=Database.block+1 
+    					self.conn.execute('''INSERT INTO blockmanagement(blockid) VALUES(?)''', (Database.block,))
     					j=0
     					
         	self.conn.commit()
@@ -121,15 +129,17 @@ def main():
 	db._init_()
 	filename = "names.txt"
 	db.read_into_db(filename)
-	db.update_state(1,5000)
 	db.update_state(1,4000)
 	db.update_state(1,2000)
 	db.update_state(1,1000)
 	db.update_state(1,3000)
+	db.update_state(1,5000)
+	db.read_into_db(filename)
+	db.data_available()
 	db.get_state(1)
 	db.get_data(1)
-	db.delete_data()
-	db.delete_management_info()
+	#db.delete_data()
+	#db.delete_management_info()
 	db.close_connection()
 
 if __name__ == "__main__":
