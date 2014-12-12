@@ -5,7 +5,7 @@ class Test(Thread):
 		Thread.__init__(self)
 
 	def run(self):
-	  # Other methodscan also be invoked from
+	  # Other methods can also be invoked from
 	  # within this method. 
 		while True:
 			print "Hello, from run()"
@@ -17,4 +17,4 @@ class Test(Thread):
 if __name__ == "__main__":
 	instance = Test()
 	instance.start() # Causes the run() method to begin executing
-	instance.another_method()
+	instance.another_method() # Just some other method of the Threaded class
