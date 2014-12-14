@@ -65,7 +65,7 @@ class Database():
             self.dataObject = []
             position = self.get_state(block_id)
 
-            if position != -1:
+            if position == 1000 | 2000 | 3000 | 4000 :
                 cursor = self.conn.execute('''SELECT data from datapool where blockid=(?) AND num BETWEEN (?) AND 4999''', (block_id,position))
             else:
                 cursor = self.conn.execute('''SELECT data from datapool where blockid=(?)''', (block_id,))
