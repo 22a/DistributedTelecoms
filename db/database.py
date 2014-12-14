@@ -3,10 +3,9 @@ from itertools import islice
 from Queue import Queue
 import json
 import os
-from threading import * 
 import time
 
-class Database(Thread):
+class Database():
 
     READ_IN_SIZE = 1000000
     block = 0
@@ -14,7 +13,6 @@ class Database(Thread):
 
         #Open a database for work
     def _init_(self,filename):
-        Thread.__init__(self)
         self.filename = filename
         self.blockid_queue = Queue()
         self.start_pos = 0
@@ -22,9 +20,6 @@ class Database(Thread):
         self.conn =  sqlite3.connect('database.sqlite')
         for line in open('query.sql','r'):
             self.conn.execute(line)
-
-
-
         print "Connection To The DB Has Been Established..."
         
 
@@ -112,8 +107,8 @@ class Database(Thread):
                         j = 0
                         
             self.conn.commit()
-            self.start_pos=self.end_pos
-            self.end_pos=self.end_pos+Database.READ_IN_SIZE
+            self.start_pos = self.end_pos
+            self.end_pos = self.end_pos + Database.READ_IN_SIZE
             return True
         
     
@@ -122,6 +117,9 @@ class Database(Thread):
 
     def data_available(self):
         return self.blockid_queue.qsize() > 0
+
+    def blocks_to_process(self):
+        return self.blockid_queue.qsize()
 
     def delete_data(self):
         self.conn.execute('DELETE FROM datapool')
@@ -143,40 +141,3 @@ class Database(Thread):
         except OSError, e:  ## if failed, report it back to the user ##
             print ("Error: %s - %s." % (e.filename,e.strerror))
 
-    
-    #I want the thread to read in when que is small
-    #and I want the data to be deleted when possible.
-    def run(self):
-        while True:
-            
-            self.read_into_db("names.txt")
-                    
-
-            time.sleep(10)
-     
-
-
-def main():
-    #The Following are Tests for the database
-    print "Testing DB Class"
-    filename = "names.txt"
-    db = Database()
-    db._init_(filename)
-    #db.start()
-    # db.start()
-    db.read_into_db(filename)
-    #db.read_into_db()
-    #db.update_state(0,4000)
-    #db.update_state(0,2000)
-    #db.update_state(0,1000)
-    #db.update_state(0,3000)
-    #db.update_state(0,5000)
-    db.get_state(0)
-    db.get_data()
-    db.get_data()
-    #db.delete_data()
-    #db.delete_management_info()
-    db.close_connection()
-
-if __name__ == "__main__":
-    main()
