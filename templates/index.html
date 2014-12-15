@@ -1,0 +1,63 @@
+<html lang="en">
+
+  <head>
+    <title>Distributed Workers</title>
+    <link href="static/icon.ico" rel="shortcut icon" type="image/x-icon" />
+    <link href="static/style.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript" src="{{ url_for('static', filename='jquery.js') }}"></script>
+    <script type="text/javascript"> $SCRIPT_ROOT = {{ request.script_root|tojson|safe }}; </script>
+    <script type="text/javascript">
+      setInterval(                               //Periodically 
+        function()
+        {
+           $.getJSON(                            //Get some values from the server
+              $SCRIPT_ROOT + '/_return_bPool',      // At this URL
+              {},                                // With no extra parameters
+              function(data)                     // And when you get a response
+              {
+                $("#bpool").text(data.result);  // Write the results into the #result element
+              });
+
+           $.getJSON(                            //Get some values from the server
+              $SCRIPT_ROOT + '/_return_bPro',      // At this URL
+              {},                                // With no extra parameters
+              function(data)                     // And when you get a response
+              {
+                $("#bpro").text(data.result);  // Write the results into the #result element
+              });
+
+           $.getJSON(                            //Get some values from the server
+              $SCRIPT_ROOT + '/_return_wPool',      // At this URL
+              {},                                // With no extra parameters
+              function(data)                     // And when you get a response
+              {
+                $("#wpool").text(data.result);  // Write the results into the #result element
+              });
+        },
+        500);
+    </script>
+  </head>
+
+  <body>
+
+    <div class="container">
+
+      <div class="header">
+        <p>Distributed Workers</p>
+      </div>
+      
+      <div class="images">
+      <img src="static/coordinator.png" style="width:150px;height:150px">
+      <img src="static/worker.png" style="width:150px;height:150px">
+      </div>
+
+      <div class="info">
+        <p>Blocks in pool to be processed: <span id="bpool">?</span></p>
+
+        <p>Blocks processed: <span id="bpro">?</span></p>
+
+        <p>Workers in pool: <span id="wpool">?</span></p>
+      </div>
+    </div>
+  </body>
+</html>
