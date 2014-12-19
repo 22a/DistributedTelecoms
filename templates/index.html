@@ -33,6 +33,23 @@
               {
                 $("#wpool").text(data.result);  // Write the results into the #result element
               });
+
+           $.getJSON(                            //Get some values from the server
+              $SCRIPT_ROOT + '/_return_fProg',      // At this URL
+              {},                                // With no extra parameters
+              function(data)                     // And when you get a response
+              {
+                $("#progressBar").css("width", data.result + '%');// Write the results into the #result element
+              });
+
+           $.getJSON(                            //Get some values from the server
+              $SCRIPT_ROOT + '/_return_fCread',      // At this URL
+              {},                                // With no extra parameters
+              function(data)                     // And when you get a response
+              {
+                if(data.result) $("#barWrap").show();
+                else $("#barWrap").hide();
+              });
         },
         500);
     </script>
@@ -42,21 +59,45 @@
 
     <div class="container">
 
-      <div class="header">
-        <p>Distributed Workers</p>
-      </div>
-      
-      <div class="images">
-      <img src="static/coordinator.png" style="width:150px;height:150px">
-      <img src="static/worker.png" style="width:150px;height:150px">
-      </div>
+      <div class="cont2">
 
-      <div class="info">
-        <p>Blocks in pool to be processed: <span id="bpool">?</span></p>
+        <div class = "headCont">
+          <div class="header">
+            Distributed Workers
+          </div>
 
-        <p>Blocks processed: <span id="bpro">?</span></p>
+          <div class="aDesc">
+          CS2041 - Telecommunications II - Assignment 3
+          </div>
 
-        <p>Workers in pool: <span id="wpool">?</span></p>
+          <div class="authors">
+            Aaron Joyce &nbsp ♦ &nbsp Ciaran Finn &nbsp ♦ &nbsp Peter Meehan
+            <!-- ALPHABETICAL BY FIRST NAME, FEEL FREE TO SWITCH TO SURNAME -->
+          </div>
+        </div>
+
+        <div class="info">
+
+          <div id="leftcolumn">
+            <img src="static/coordinator.png" style="width:150px;height:150px">
+            <p>Blocks to be processed: <span id="bpool">?</span></p>
+            <p>Blocks processed: <span id="bpro">?</span></p>
+          </div>
+
+          <div id="rightcolumn">
+            <img src="static/worker.png" style="width:150px;height:150px">
+            <p>Workers connected: <span id="wpool">?</span></p>
+          </div>
+          <div class="clear"></div>
+        </div>
+
+        <div id="barWrap" class="loadWrap">
+          Progress loading file:
+          <div class="meter">
+            <span id="progressBar" style="width: 1%"></span>
+          </div>
+        </div>
+
       </div>
     </div>
   </body>
