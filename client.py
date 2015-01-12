@@ -54,7 +54,7 @@ class Client(Thread):
 					print( "request accepted sent")
 				
 			elif (packet['type'] == "DATA"):
-				print(" -- DATA RECEIVED -- ")
+				#print(" -- DATA RECEIVED -- ")
 				self.packets[packet['start_index']/len(packet['payload'])] = packet['payload']
 				self.target = packet['target']
 				self.send(positive_data_acknowledgement(packet['block_id'], packet['start_index']), addr)

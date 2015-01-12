@@ -4,7 +4,7 @@ from socket import *
 from socket import *
 from thread import * 
 from Queue import * 
-from worker_queue import *
+#from worker_queue import *
 from json import *
 from packet_pool import *
 from database import Database
@@ -15,9 +15,19 @@ from packet_constructors import DataDeconstructor
 from db_regulator import *
 import time
 import sys
+import webbrowser, os
+from flask import Flask, render_template, jsonify
+from errors import EmptyQueueException
+import logging
+
+# SOME FILTHY GLOBAL VARIABLES
+bPool = 2000
+bPro = 10
+wPool = 0
+fProg = 0
 
 class Server(Thread):
-	def __init__(self, ip, port):
+	def __init__(self, ip, port, target_name):
 		Thread.__init__(self)
 		self.sock = socket(AF_INET, SOCK_DGRAM)
 		self.UDP_IP = ip
@@ -37,6 +47,7 @@ class Server(Thread):
 		#self.default_listener.start()
 		self.reading_in = True
 		self.block_count = 0
+		self.target_name = target_name
 		# socket.sendto(string, flags, address) or socket.sendto(string, flags)
 
 
@@ -55,9 +66,11 @@ class Server(Thread):
 				(self.packet_pool.size() > 0)):
 				time.sleep(0.01)
 				if (self.worker_pool.size() > 0):
+					wPool = self.worker_pool.size()
+					print("worker_pool.size(): " + str(self.worker_pool.size()))
 					try:
 						worker_copy = self.worker_pool.dequeue()
-					except EmptyQueueException, e:
+					except EmptyQueueException:
 						pass
 					if not(worker_copy.is_engaged()):
 						if (self.packet_pool.size() > 0):
@@ -66,7 +79,7 @@ class Server(Thread):
 							data_from_server = json.loads(self.db_access_regulator.get_data())
 							packets = DataDeconstructor().deconstruct(
 								data_from_server[1]["data"], 250, 
-								data_from_server[0]["id"], "john smith")
+								data_from_server[0]["id"], self.target_name)
 							worker_copy.set_packets(packets)
 							worker_copy.send(available(len(worker_copy.get_packets())))
 					self.reading_in = self.db_access_regulator.is_reading_in()
@@ -112,6 +125,7 @@ class Server(Thread):
 		return self.block_count
 
 	def set_block_count(self, count):
+		bPro = count
 		self.block_count = count
 
 	def get_block_count(self):
@@ -131,7 +145,7 @@ class DefaultListener(Thread):
 			try:
 				packet, addr = self.sock.recvfrom(16384)
 				skip = False
-			except Exception, e:
+			except Exception:
 				pass
 			if (skip == False):
 				if (packet != ""):
@@ -152,7 +166,7 @@ class IncomingConnectionAcceptor(Thread):
 			try:
 				packet, addr = self.sock.recvfrom(16384)
 				skip = False
-			except Exception, e:
+			except Exception:
 				pass
 			if (skip == False):
 				print("Connection accepted")
@@ -181,7 +195,7 @@ class WorkerRevitaliser(Thread):
 			if (self.server.worker_pool.size() > 0):
 				try:
 					dequeued_worker = self.server.worker_pool.dequeue()
-				except EmptyQueueException, e:
+				except EmptyQueueException:
 					pass
 				if (dequeued_worker.is_connected() == True):
 					if (dequeued_worker.is_engaged() == False):
@@ -244,8 +258,8 @@ class Worker(Thread):
 				elif (packet['type'] == "POS_DATA_ACK"):
 					if not(self.started):
 						self.start()
-					print("Data acknwoledgement from client: " + str( 
-						packet['start_index']/250))
+					#print("Data acknwoledgement from client: " + str( 
+					#	packet['start_index']/250))
 					self.set_window(packet['start_index']/250)
 					self.server.set_block_count(int(packet['block_id']))
 					if (packet['block_id'] == 19):
@@ -254,7 +268,7 @@ class Worker(Thread):
 					for index in self.get_packets():
 						self.send(self.get_packets()[index])
 						self.engaged = True
-					print("REQUEST_ACCEPTED")
+					#print("REQUEST_ACCEPTED")
 
 				elif (packet['type'] == "REQUEST_REJECTED"):
 					self.set_availability(False)
@@ -300,8 +314,78 @@ class Worker(Thread):
 	def set_connected(self, connected):
 		self.connected = connected
 
+#These function can be merged into server.py, that way we can jsonify the simple returns 
+#from the db and various pools
+
+
+app = Flask(__name__)
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
+
+
+@app.route('/_return_bPool')
+def return_bPool():
+  global bPool
+  bPool = bPool -1
+  return jsonify(result=bPool) #values are hardcoded for display purposes, they will call a function that returns an int size
+
+@app.route('/_return_bPro')
+def return_bPro():
+  global bPro
+  bPro = bPro + 1
+  return jsonify(result=bPro)
+
+@app.route('/_return_wPool')
+def return_wPool():
+  
+  return jsonify(result=wPool)
+
+@app.route('/_return_fProg')
+def return_fProg():
+  global fProg
+  fProg = fProg + 9
+  return jsonify(result=fProg%100)
+
+@app.route('/_return_fCread')
+def return_fCread():
+  ## we should have a var here that is 1 if we're reading in a file, 0 otherwise
+  global fProg
+  test = 1
+  if fProg%90==0:     ##for display purposes hides loading bar every 5 seconds
+    test = 0
+  return jsonify(result=test)
+
+@app.route('/addWorker')
+def return_AddWorker():
+  os.system("python client.py")
+  return
+    
+@app.route("/")
+def hello():
+  return render_template('index.html')
+
+class ConcurrentGui(Thread):
+	def __init__(self):
+		Thread.__init__(self)
+
+	def run(self):
+		webbrowser.open('127.0.0.1:5000')
+		app.run()
 
 
 if __name__ == "__main__":
-	server = Server('localhost', 24069)
+	name = raw_input("Enter the name you wish to search from: ")
+	"""
+	webbrowser.open('127.0.0.1:5000')
+	app.run()
+	"""
+	browser_gui = ConcurrentGui()
+	browser_gui.start()
+
+	print("should be executed")
+	server = Server('localhost', 24069, name)
 	server.start()
+	#app.debug = True
+	#b = webbrowser.get('firefox')
+	#b.open_new('127.0.0.1:5000')      #using webbrowser to automatically open the ui

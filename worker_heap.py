@@ -1,5 +1,6 @@
 from Queue import Queue
-from server_test import *
+#from server_test import *
+from errors import *
 
 class WorkerHeap:
 	def __init__(self, capacity = 10000):
