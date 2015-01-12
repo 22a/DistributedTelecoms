@@ -9,12 +9,17 @@ class DatabaseAccessRegulator(Thread):
 		self.db = None
 		self.db_queue = DatabaseQueue(self)
 		self.data_queue = Queue()
+		self.reading_in = False
 
 	def run(self):
 		self.db = Database()
 		self.db._init_(self.filename)
 		self.db.read_into_db(self.filename)
 		while True:
+			if ( self.db.blocks_to_process() < 10 ):
+				self.reading_in = True
+				self.read_into_db()
+				self.reading_in = False
 			if ( self.db_queue.qsize() > 0 ):
 				item = self.db_queue.get()
 				self.db.update_state(item[0], item[1])
@@ -24,11 +29,12 @@ class DatabaseAccessRegulator(Thread):
 			 		temp = self.db.get_data()
 			 		self.data_queue.put(temp)
 
+
 	def update_state(self, block_id, pos):
 		self.db_queue.insert(block_id, pos)
 
 	def read_into_db(self):
-		self.db.read_into_db(filename)
+		self.db.read_into_db(self.filename)
 
 	def data_available(self):
 		if ( self.data_queue.qsize() > 0 ):
@@ -38,6 +44,12 @@ class DatabaseAccessRegulator(Thread):
 
 	def get_data(self):
 		return self.data_queue.get()
+
+	def is_reading_in(self):
+		return self.reading_in
+
+	def blocks_loaded_percentage(self):
+		return self.db.blocks_loaded_percentage()
 
 
 
@@ -64,7 +76,6 @@ class ThreadedClass(Thread):
 	def run(self):
 		for i in range(20):
 			self.regulator.update_state(i,1000)
-
 
 
 if __name__ == "__main__":
