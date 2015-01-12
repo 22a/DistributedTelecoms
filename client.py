@@ -1,177 +1,159 @@
-# -*- coding: utf-8 -*-
+from threading import * 
+from socket import * 
+from packets import * 
 
-from json import JSONDecoder;
-import sys
-from socket import *
-from thread import * 
-from socket import socket
-from socket import AF_INET
-import threading
-import json
-from packets import *
-from packet_constructors import DataReconstructor
+class Client(Thread):
+	def __init__(self, ip, port):
+		Thread.__init__(self)
+		self.server_ip = ip
+		self.server_port = port
+		self.sock = socket(AF_INET, SOCK_DGRAM)
+		self.task = None
+		self.packets = []
+		self.processing = False
+		self.expected_packet_count = -1
+		self.expected_instance_per_packet = -1
+		self.target = ""
+		self.matches = {}
+		self.engaged = False	# It is necessary to set an 
+								# engagement record. Otherwise, the 
+								# Server may send another packet to 
+								# the Client, while the Client has 
+								# already agreed to process a previous request. 
+	def run(self):
+		while True:
+			#print("self.ready_to_process(): " + str(self.ready_to_process()))
+			if (self.ready_to_process() == True):
+				dataset = []
+				for instance in range( len( self.packets ) ):
+					#print("instance: " + str(self.packets[instance]))
+					dataset.extend(self.packets[instance])
 
-class RemoteWorker(threading.Thread):
-	def __init__(self, server_address, server_port):
-		threading.Thread.__init__(self)
-		self.sock = socket(AF_INET, SOCK_STREAM)
-		#self.sock.bind((server_address,server_port))
-		self.sock.connect((server_address, server_port))
-		print "connection established"
-		self.server_address = server_address
-		self.server_port = server_port
-		#self.sock.listen(1)
-		#self.run() # probably should omit this!
-		self.id = id
-		self.block_id = -1
-		self.index_in_heap = -1
-		self.items_assigned = -1 # The number of items that has been assigned to a worker
-		self.items_processed = -1 # The number of those items assigned that have been processed
-		self.start_index = 0
-		self.busy = False
+				self.task = ConcurrentTask(self.target, "1", dataset, self)
+				self.task.start()
 
+			packet, addr = self.sock.recvfrom(16384)
+			packet = json.loads(packet)
+			self.server_ip = addr[0]
+			self.server_port = addr[1]
+
+			if (packet['type'] == "AVAILABLE"):
+				if (self.task != None):
+					if not(self.task.is_processing()):
+						self.engaged = True
+						self.send(request_accepted(), addr)
+						self.packets = initialise_list(self.packets, packet['packet_count'], None)
+						self.expected_packet_count = packet['packet_count']
+					else:
+						self.send(available(False), addr)
+				else:
+					self.engaged = True
+					self.send(request_accepted(), addr)
+					self.packets = initialise_list(self.packets, packet['packet_count'], None)
+					self.expected_packet_count = packet['packet_count']
+					print( "request accepted sent")
+				
+			elif (packet['type'] == "DATA"):
+				print(" -- DATA RECEIVED -- ")
+				self.packets[packet['start_index']/len(packet['payload'])] = packet['payload']
+				self.target = packet['target']
+				self.send(positive_data_acknowledgement(packet['block_id'], packet['start_index']), addr)
+			
+			elif (packet['type'] == "PROCESSING"):
+				self.send(processed_section(self.task.get_dataset_id(),
+					self.task.processed_to()), addr)
+
+			elif (packet['type'] == "PING"):
+				self.send(alive())
+
+			elif (packet['type'] == "MATCH_REQUEST"):
+				self.send(match_found(self.get_matches()))
+				self.reset_matches()
+
+	def ready_to_process(self):
+		if (len(self.packets) > 0):
+			for value in self.packets:
+				if (value == None):
+					return False
+			return True
+		return False
+
+	def send(self, packet, dest = None):
+		if (dest == None):
+			self.sock.sendto(packet,(self.server_ip, self.server_port))
+		else:
+			self.sock.sendto(packet, dest)
+
+	def add_match(self, block_id, index):
+		self.matches[block_id] = index
+
+	def get_matches(self):
+		return self.matches
+
+	def reset_matches(self):
+		self.matches = {}
+
+# Assumed structure of a Server-Client data packet:
+# 	-> 'type'			:	'DATA'
+# 	-> 'block_id'		: 	'block_id'
+# 	-> 'start_index' 	: 	start_index of target, relative to block(int)
+#	-> 'target'			: 	target (string)
+#	-> 'payload'		: 	payload (list of string values)
+# 	-> 'more'			:	boolean (True or False)
+
+
+class ConcurrentTask(Thread):
+	def __init__(self, target, dataset_id, dataset, client):
+		Thread.__init__(self)
+		self.target = target
+		self.dataset = dataset
+		self.dataset_id = dataset_id
+		self.processed_to = 0
+		self.processing = False
+		self.client = client 
 
 	def run(self):
-		reconstructor = DataReconstructor()
-		while True:
-			#conn, addr = self.sock.accept()
-			# having received something from the server, tell the server
-			# that you have received their message
-			#conn, addr = self.sock.accept()
-			#received = conn.recv(1024)
-			#data = conn.recv(1024)
-			#print( "received from server: ", data )
-			#conn.send( "Client: Received message from the Server." )
-			raw_from_server = self.sock.recv(65536)
-			if (raw_from_server != ""):
-				packets_conjoined = False
-				conjoined_packets = []
-				try:
-					decoded_message = json.loads(raw_from_server)
-				except ValueError, e:
-					index_from = 0
-					more_index = 0
-					while ( raw_from_server.find( "{\"type\": \"DATA\"}", index_from ) != -1 ):
-						packets_conjoined = True
-						more_index = raw_from_server.find( "more", index_from ) 
-						next_packet_start_index = raw_from_server.find( "[", more_index )
+		self.processing = True
+		index = 0
+		for instance in self.dataset:
+			if (instance == self.target):
+				#self.client.send(found(self.dataset_id, index))
+				self.client.add_match(self.dataset_id, index)
+			if ((index % 1000 == 0) & (index != 0)):
+				self.client.send(processed_section(self.dataset_id, index)) 
+				self.processed_to = index
+			index = index + 1
+		self.client.send(complete(self.dataset_id))
+		self.processing = False
 
-						if ( next_packet_start_index != -1 ):
-							conjoined_packets.append( raw_from_server[index_from:next_packet_start_index])
-							index_from = next_packet_start_index
-						else:
-							conjoined_packets.append( raw_from_server[index_from:])
-							index_from = more_index
-					print( "Error/exception message: " + str( e ) + ". Clean-up ops. performed." )
+	def get_dataset_id(self):
+		return self.dataset_id
 
-				if ( packets_conjoined == True ):
-					if ( len( conjoined_packets ) > 0 ):
-						for packet in conjoined_packets:
-							if ( self.busy == False ):
-								#print "sys.getsizeof( packet ): " + str( sys.getsizeof( packet ) )
-								#print "packet: " + str( packet )
-								decoded_message = json.loads(packet)
-								self.block_id = decoded_message[1]['block_id']
-								if ( self.start_index == 0 ):
-									self.start_index = decoded_message[2]['start_index']
-								reconstructor.add(decoded_message[4]['payload'])
-								items_assigned = reconstructor.length()
-								if (decoded_message[5]['more'] == False):
-									self.search(decoded_message[3]['target'], reconstructor.flush())
-									reconstructor.reset()
-							else:
-								busy(self.block_id)
+	def is_processing(self):
+		return self.processing 
 
-				elif (decoded_message[0]['type'] == "DATA"):
-					if ( self.busy == False ):
-						self.block_id = decoded_message[1]['block_id']
-						if ( self.start_index == 0 ):
-							self.start_index = decoded_message[2]['start_index']
-						#items_assigned = len(decoded_message['payload']) #decomm
-						# May need to thread this method
-						reconstructor.add(decoded_message[4]['payload'])
-						items_assigned = reconstructor.length() 
-						if (decoded_message[5]['more'] == False):
-							self.search(decoded_message[3]['target'], reconstructor.flush())
-							reconstructor.reset()
-						# self.search(decoded_message['target'], decoded_message['payload']) # decomm
-					else:
-						busy(self.block_id)
-				# Request for a status update, essentially
-				elif (decoded_message['type'] == "AVAILABILITY"):
-					available(self.id, self.busy)
-				else:
-					raise Exception("This exception should not have been raised!")
-		conn.close() # this may be the cause of an error. 
-		self.sock.close()
+	def processed_to(self):
+		return self.processed_to
 
-	def set_block_id(self,id):
-		self.block_id = id
+def insertion_sort(array):
+	for i in range(len(array)):
+		j = i 
+		while ((j>0) & (array[j-1] > array[j])):
+			array = swap(array, j, j-1)
+			j -= 1
+	return array
 
-	def get_block_id(self):
-		return self.block_id
+def swap(array, i, j):
+	temp = array[i]
+	array[i] = array[j]
+	array[j] = temp
+	return array
 
-	def set_items_assigned(self, items_assigned):
-		self.items_assigned = items_assigned
-
-	def get_items_assigned(self):
-		return self.items_assigned
-
-	def is_available(self):
-		return self.available
-
-	def get_items_processed(self):
-		return self.items_processed
-
-	def get_id(self):
-		return self.id 
-
-	def set_index_in_heap(self, index):
-		self.index_in_heap = index
-
-	def set_availability(self, availability):
-		self.available = availability
-
-	def say(self, packet):
-		self.sock.send(packet)
-
-
-	def search(self, name, names):
-		self.busy = True
-		for index, name in enumerate(names):
-			if ( name == 'name' ):
-				# found(id, index) returns a json 
-				# packet that is to be sent to the
-				# Server/Coordinator, informing 
-				# it that a match has been found (id == 'MATCH')
-				self.say(found(self.block_id, ( self.start_index + index)))
-			# I'm unsure whether this should ping the Server per 1000 
-			# names processed, or per 1/5 of items_assigned that have 
-			# been processed - I guess that per 1000 is sufficient. 
-			if ( ( (index + self.start_index) % 1000 == 0 ) & ( ( self.start_index + index ) != 0 ) ):
-				# processed_section() returns a packet
-				# that is to be sent to the Server/Coordinator, 
-				# informing it that a match has been found (id == 'PROCESSED_1000')
-				self.items_processed = ( index + self.start_index )
-				self.say(processed_section(self.block_id, (index + self.start_index)))
-
-		# complete(id) returns a json packet
-		# that is to be sent to the Server/Coordinator,
-		# informing it that all of the items in the 
-		# assigned dataset have been searched (id == 'COMPLETE')
-		# Flush
-		self.say(complete(self.block_id))
-
-		# Some clean-up actions
-		self.start_index = 0
-		self.items_processed = -1
-		self.busy = False
-		self.items_assigned = -1
-		self.block_id = -1
-
-
+def initialise_list(array, length, value):
+	for i in range(length):
+		array.append(value)
+	return array
 if __name__ == "__main__":
-	host = 'localhost'
-	port = 24069
-	worker = RemoteWorker(host, port)
-	worker.start()
+	client = Client('localhost', 24069)
+	client.start()
+	client.send(connect(1))
