@@ -1,0 +1,47 @@
+Database Methods:
+
+@param:block_id
+@return:index of what needs to be processed 
+(int 5000 means that 5000 lines where processed)
+----------------------
+| getState(block_id) |
+----------------------
+
+@param:block_id
+@param:ammount processed (1K will set the 1K BOOL...)
+@return:Void
+---------------------------
+|updateState(block_id,pos)|
+---------------------------
+
+Reads names into the database at a time
+@param:filename
+@return:Void
+This function will return the next 1,000,0000 names regardless
+*depending there is that amount.
+
+—Give coordinator block_ids to push into the priority queue
+-----------------------
+| readIntoDB(filename)|
+-----------------------
+
+Question: Say if some of the names in the block have been processed (e.g., 3000 out of the 5000), 
+does this function just return all of the names in the specificed block that have not been marked
+as "processed"?
+
+@return:returns a block of data (Approx 5000 names)
+the data will be an array of objects
+with preceding block_id
+———————————————————-
+| getData(block_id)|
+———————————————————-
+
+@return:returns a Boolean, true, if there is data block in the database
+waiting to be processed. Otherwise, it returns false. 
+———————————————————-
+| dataAvailable()|
+———————————————————-
+
+
+**Please Have a look over this and make changes to want
+you want or need. If I have forgotten anything please add it**
