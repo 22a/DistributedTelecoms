@@ -7,6 +7,16 @@
     <script type="text/javascript" src="{{ url_for('static', filename='jquery.js') }}"></script>
     <script type="text/javascript"> $SCRIPT_ROOT = {{ request.script_root|tojson|safe }}; </script>
     <script type="text/javascript">
+      $(function() {
+        $("#button").click( function()
+             {
+                $.getJSON( $SCRIPT_ROOT + '/addWorker');
+                alert('WORKER ADDED!');
+             }
+        );
+      });
+    </script>
+    <script type="text/javascript">
       setInterval(                               //Periodically 
         function()
         {
@@ -80,16 +90,21 @@
 
           <div id="leftcolumn">
             <img src="static/coordinator.png" style="width:150px;height:150px">
-            <p>Blocks to be processed: <span id="bpool">?</span></p>
-            <p>Blocks processed: <span id="bpro">?</span></p>
+            <p>Blocks to be processed: <span id="bpool"> </span></p>
+            <p>Blocks processed: <span id="bpro"> </span></p>
           </div>
 
           <div id="rightcolumn">
             <img src="static/worker.png" style="width:150px;height:150px">
-            <p>Workers connected: <span id="wpool">?</span></p>
+            <p>Workers connected: <span id="wpool"> </span></p>
           </div>
           <div class="clear"></div>
         </div>
+
+        <div id="addButton">
+          <button id="button" type="button">Add Worker</button>
+        </div>
+        
 
         <div id="barWrap" class="loadWrap">
           Progress loading file:
